@@ -38,6 +38,9 @@ jobs:
     needs: esphome_version
     strategy:
       matrix:
+        component:
+          - ble_remote
+          - ble_remote_receiver
         esphome_version:
           - ${{ needs.esphome_version.outputs.tag }}
           - 2025.11.5
@@ -51,7 +54,7 @@ jobs:
         - /github/home/.cache:/github/home/.cache
         - /github/home/.platformio:/github/home/.platformio
     env:
-      YAML_FILE: example_ble_remote.yaml
+      YAML_FILE: example_${matrix.component}.yaml
     steps:
       - uses: actions/checkout@v6
 
@@ -69,6 +72,7 @@ jobs:
         run: |-
           echo "wifi_ssid: TEST" >> secrets.yaml
           echo "wifi_password: testtest" >> secrets.yaml
+          echo "ble_remote_shared_key: TEST" >> secrets.yaml
 
       - name: Generate cache key
         run: |-

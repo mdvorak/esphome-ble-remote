@@ -1,0 +1,46 @@
+substitutions:
+  devicename: ble-remote
+
+esphome:
+  name: "${devicename}"
+  min_version: 2025.12.0
+
+external_components:
+  - source: github://mdvorak/esphome-ble-remote
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+logger:
+captive_portal:
+
+ota:
+  platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "${devicename}-AP"
+
+esp32_ble_server:
+
+ble_remote:
+  id: sample_remote
+  shared_key: !secret ble_remote_shared_key
+
+button:
+  - platform: template
+    name: Command 01
+    on_press:
+      - ble_remote.toggle:
+          id: sample_remote
+          command: 0x01
+  - platform: template
+    name: Command 02
+    on_press:
+      - ble_remote.toggle:
+          id: sample_remote
+          command: 0x02
