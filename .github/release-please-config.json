@@ -1,0 +1,12 @@
+{
+  "always-update": true,
+  "include-component-in-tag": false,
+  "packages": {
+    ".": {
+      "release-type": "simple",
+      "extra-files": [
+        "components/ble_remote/ble_remote_version.h"
+      ]
+    }
+  }
+}

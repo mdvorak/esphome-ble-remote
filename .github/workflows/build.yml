@@ -1,0 +1,98 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - '**'
+  schedule:
+    - cron: '0 4 * * 6' # Every Saturday at 04:00 UTC
+    - cron: '0 4 * * 3' # Every Wednesday at 04:00 UTC
+  workflow_dispatch:
+
+jobs:
+  esphome_version:
+    name: Get ESPHome Version
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.get_tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Get ESPHome image tag from Dockerfile
+        id: get_tag
+        run: |
+          TAG=$(grep '^FROM ghcr.io/esphome/esphome:' Dockerfile | head -n1 | cut -d: -f2)
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Using ESPHome version: **${TAG}**" >> $GITHUB_STEP_SUMMARY
+
+  ble_remote:
+    name: BLE Remote
+    runs-on: ubuntu-latest
+    needs: esphome_version
+    strategy:
+      matrix:
+        esphome_version:
+          - ${{ needs.esphome_version.outputs.tag }}
+          - 2025.11.5
+          - beta
+        esp32_board:
+          - esp32dev
+          - esp32-c3-devkitm-1
+    container:
+      image: ghcr.io/esphome/esphome:${{ matrix.esphome_version }}
+      volumes:
+        - /github/home/.cache:/github/home/.cache
+        - /github/home/.platformio:/github/home/.platformio
+    env:
+      YAML_FILE: example_ble_remote.yaml
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set local component path
+        uses: mikefarah/yq@v4
+        with:
+          cmd: yq -i '.external_components[0].source = "./components"' ${{ env.YAML_FILE }}
+
+      - name: Set esp32 board
+        uses: mikefarah/yq@v4
+        with:
+          cmd: yq -i '.esp32.board = "${{ matrix.esp32_board }}"' ${{ env.YAML_FILE }}
+
+      - name: Prepare secrets
+        run: |-
+          echo "wifi_ssid: TEST" >> secrets.yaml
+          echo "wifi_password: testtest" >> secrets.yaml
+
+      - name: Generate cache key
+        run: |-
+          echo "ESPHOME_VERSION=$(esphome version)" >> $GITHUB_ENV
+          echo "ESPHOME_VER_HASH=$(esphome version | sha256sum | cut -d' ' -f1)" >> $GITHUB_ENV
+
+      - name: Cache dependencies
+        uses: actions/cache@v5
+        with:
+          path: |-
+            ~/.cache/pip
+            ~/.platformio/.cache
+            ~/.platformio/packages
+          key: ${{ runner.os }}-pio-${{ env.ESPHOME_VER_HASH }}-${{ matrix.esp32_board }}
+
+      - name: Build
+        run: esphome compile "$YAML_FILE"
+
+      - name: Add build summary
+        if: always()
+        run: |
+          echo "- **Device Name:** ${{ matrix.esp32_board }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Config File:** ${{ env.YAML_FILE }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **ESPHome Version:** ${{ env.ESPHOME_VERSION }}" >> $GITHUB_STEP_SUMMARY
+
+  ble_remote_ok:
+    name: BLE Remote
+    runs-on: ubuntu-latest
+    needs: ble_remote
+    steps:
+      - run: echo OK
