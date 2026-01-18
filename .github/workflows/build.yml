@@ -43,7 +43,7 @@ jobs:
           - ble_remote_receiver
         esphome_version:
           - ${{ needs.esphome_version.outputs.tag }}
-          - 2025.11.5
+          - 2025.12.0
           - beta
         esp32_board:
           - esp32dev
