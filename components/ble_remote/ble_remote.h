@@ -18,20 +18,20 @@ class BLERemote : public Component {
 
   void dump_config() override;
 
-  // Toggle the BLE remote by sending a random value via BLE manufacturer data
-  void toggle(uint16_t command);
+  // Write a command using BLE remote
+  void write(uint16_t command);
 
  protected:
   esp32_ble_server::BLEServer *ble_server_{nullptr};
   std::vector<uint8_t> shared_key_;
 };
 
-// Action to toggle BLE Remote
-template<typename... Ts> class BLERemoteToggleAction : public Action<Ts...>, public Parented<BLERemote> {
+// Action to write to BLE Remote
+template<typename... Ts> class BLERemoteWriteAction : public Action<Ts...>, public Parented<BLERemote> {
  public:
   void set_command(uint16_t command) { this->command_ = command; }
 
-  void play(const Ts &... /*x*/) override { this->parent_->toggle(this->command_); }
+  void play(const Ts &... /*x*/) override { this->parent_->write(this->command_); }
 
  protected:
   uint16_t command_{0};

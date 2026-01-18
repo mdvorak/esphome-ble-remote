@@ -11,7 +11,7 @@ void BLERemote::dump_config() {
   ESP_LOGCONFIG(TAG, "  Shared Key: %u bytes", shared_key_.size());
 }
 
-void BLERemote::toggle(uint16_t command) {
+void BLERemote::write(uint16_t command) {
   // Avoid zero nonce, which is considered invalid (unlikely but possible)
   uint32_t nonce;
   do {
@@ -25,7 +25,7 @@ void BLERemote::toggle(uint16_t command) {
   data->nonce = nonce;
   data->hash = ble_remote_calculate_hash(*data, this->shared_key_);
 
-  ESP_LOGD(TAG, "Toggling BLE remote command 0x%04X nonce %u hash: %u", command, nonce, data->hash);
+  ESP_LOGD(TAG, "Writing BLE remote command 0x%04X nonce %u hash: %u", command, nonce, data->hash);
   this->ble_server_->set_manufacturer_data(bytes);
 }
 

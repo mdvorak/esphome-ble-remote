@@ -10,10 +10,10 @@
 
 namespace esphome::ble_remote {
 
-// Trigger for BLE Remote Receiver on_toggle event
-class BLERemoteReceiverToggleTrigger : public Trigger<uint32_t> {
+// Trigger for BLE Remote Receiver on_command event
+class BLERemoteReceiverCommandTrigger : public Trigger<uint32_t> {
  public:
-  explicit BLERemoteReceiverToggleTrigger(class BLERemoteReceiver *parent);
+  explicit BLERemoteReceiverCommandTrigger(class BLERemoteReceiver *parent);
 
   void set_command(uint16_t command) { this->command_ = command; this->has_command_ = true; }
   uint16_t command() const { return this->command_; }
@@ -34,8 +34,8 @@ class BLERemoteReceiver : public Component, public esp32_ble_tracker::ESPBTDevic
 
   bool parse_device(const esp32_ble_tracker::ESPBTDevice &device) override;
 
-  void add_on_toggle_trigger(BLERemoteReceiverToggleTrigger *trigger) {
-    this->on_toggle_triggers_.push_back(trigger);
+  void add_on_command_trigger(BLERemoteReceiverCommandTrigger *trigger) {
+    this->on_command_triggers_.push_back(trigger);
   }
 
  protected:
@@ -44,12 +44,12 @@ class BLERemoteReceiver : public Component, public esp32_ble_tracker::ESPBTDevic
   uint32_t last_nonce_{0};
   uint32_t last_received_nonce_{0};
   bool initialized_{false};
-  std::vector<BLERemoteReceiverToggleTrigger *> on_toggle_triggers_{};
+  std::vector<BLERemoteReceiverCommandTrigger *> on_command_triggers_{};
 };
 
-// Implementation of BLERemoteReceiverToggleTrigger constructor
-inline BLERemoteReceiverToggleTrigger::BLERemoteReceiverToggleTrigger(BLERemoteReceiver *parent) {
-  parent->add_on_toggle_trigger(this);
+// Implementation of BLERemoteReceiverCommandTrigger constructor
+inline BLERemoteReceiverCommandTrigger::BLERemoteReceiverCommandTrigger(BLERemoteReceiver *parent) {
+  parent->add_on_command_trigger(this);
 }
 
 }  // namespace esphome::ble_remote

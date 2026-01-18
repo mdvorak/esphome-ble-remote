@@ -57,8 +57,8 @@ bool BLERemoteReceiver::parse_device(const esp32_ble_tracker::ESPBTDevice &devic
       this->last_nonce_ = command_data.nonce;
       ESP_LOGD(TAG, "Command 0x%04X with nonce %u", command_data.command, command_data.nonce);
 
-      // Trigger on_toggle automations for matching command
-      for (auto *trigger : this->on_toggle_triggers_) {
+      // Trigger on_command automations for matching command
+      for (auto *trigger : this->on_command_triggers_) {
         if (!trigger->has_command() || trigger->command() == command_data.command) {
           trigger->trigger(command_data.command);
         }

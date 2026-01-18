@@ -11,7 +11,7 @@ AUTO_LOAD = ["ble_remote_common"]
 
 ble_remote_ns = cg.esphome_ns.namespace("ble_remote")
 BLERemote = ble_remote_ns.class_("BLERemote", cg.Component)
-BLERemoteToggleAction = ble_remote_ns.class_("BLERemoteToggleAction", automation.Action)
+BLERemoteWriteAction = ble_remote_ns.class_("BLERemoteWriteAction", automation.Action)
 
 CONF_BLE_SERVER_ID = "ble_server_id"
 
@@ -34,8 +34,8 @@ async def to_code(config):
 
 
 @automation.register_action(
-    "ble_remote.toggle",
-    BLERemoteToggleAction,
+    "ble_remote.write",
+    BLERemoteWriteAction,
     cv.Schema(
         {
             cv.GenerateID(): cv.use_id(BLERemote),
@@ -43,7 +43,7 @@ async def to_code(config):
         }
     ),
 )
-async def ble_remote_toggle_to_code(config, action_id, template_arg, args):
+async def ble_remote_write_to_code(config, action_id, template_arg, args):
     var = cg.new_Pvariable(action_id, template_arg)
     await cg.register_parented(var, config[CONF_ID])
     cg.add(var.set_command(config[CONF_COMMAND]))

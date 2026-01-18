@@ -13,21 +13,21 @@ ble_remote_ns = cg.esphome_ns.namespace("ble_remote")
 BLERemoteReceiver = ble_remote_ns.class_(
     "BLERemoteReceiver", cg.Component, esp32_ble_tracker.ESPBTDeviceListener
 )
-BLERemoteReceiverToggleTrigger = ble_remote_ns.class_(
-    "BLERemoteReceiverToggleTrigger", automation.Trigger.template(cg.uint32)
+BLERemoteReceiverCommandTrigger = ble_remote_ns.class_(
+    "BLERemoteReceiverCommandTrigger", automation.Trigger.template(cg.uint32)
 )
 
-CONF_ON_TOGGLE = "on_toggle"
+CONF_ON_COMMAND = "on_command"
 
 CONFIG_SCHEMA = cv.Schema(
     {
         cv.GenerateID(): cv.declare_id(BLERemoteReceiver),
         cv.Required(CONF_MAC_ADDRESS): cv.mac_address,
         cv.Required(CONF_SHARED_KEY): cv.string,
-        cv.Optional(CONF_ON_TOGGLE): automation.validate_automation(
+        cv.Optional(CONF_ON_COMMAND): automation.validate_automation(
             {
                 cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(
-                    BLERemoteReceiverToggleTrigger
+                    BLERemoteReceiverCommandTrigger
                 ),
                 cv.Optional(CONF_COMMAND): cv.hex_uint16_t,
             }
@@ -44,7 +44,7 @@ async def to_code(config):
     cg.add(var.set_mac_address(config[CONF_MAC_ADDRESS].as_hex))
     cg.add(var.set_shared_key(config[CONF_SHARED_KEY]))
 
-    for conf in config.get(CONF_ON_TOGGLE, []):
+    for conf in config.get(CONF_ON_COMMAND, []):
         trigger = cg.new_Pvariable(conf[CONF_TRIGGER_ID], var)
         if CONF_COMMAND in conf:
             cg.add(trigger.set_command(conf[CONF_COMMAND]))
