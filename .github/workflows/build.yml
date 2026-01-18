@@ -16,6 +16,8 @@ jobs:
   esphome_version:
     name: Get ESPHome Version
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       tag: ${{ steps.get_tag.outputs.tag }}
     steps:
@@ -31,6 +33,8 @@ jobs:
   ble_remote:
     name: BLE Remote
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: esphome_version
     strategy:
       matrix:
@@ -93,6 +97,7 @@ jobs:
   ble_remote_ok:
     name: BLE Remote
     runs-on: ubuntu-latest
+    permissions: {}
     needs: ble_remote
     steps:
       - run: echo OK
