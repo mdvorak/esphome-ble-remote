@@ -5,6 +5,7 @@
 #include "esphome/components/esp32_ble_tracker/esp32_ble_tracker.h"
 #include "esphome/components/ble_remote_common/ble_remote_common.h"
 
+#include <array>
 #include <string>
 #include <vector>
 
@@ -39,10 +40,15 @@ class BLERemoteReceiver : public Component, public esp32_ble_tracker::ESPBTDevic
   }
 
  protected:
+  static constexpr size_t REPLAY_WINDOW_SIZE = 16;
+
+  bool is_replay_(uint32_t nonce) const;
+  void record_nonce_(uint32_t nonce);
+
   uint64_t mac_address_{0};
   std::vector<uint8_t> shared_key_;
-  uint32_t last_nonce_{0};
-  uint32_t last_received_nonce_{0};
+  std::array<uint32_t, REPLAY_WINDOW_SIZE> recent_nonces_{};
+  size_t recent_nonces_pos_{0};
   bool initialized_{false};
   std::vector<BLERemoteReceiverCommandTrigger *> on_command_triggers_{};
 };

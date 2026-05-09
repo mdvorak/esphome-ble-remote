@@ -3,7 +3,7 @@ import esphome.config_validation as cv
 from esphome import automation
 from esphome.components import esp32_ble_tracker
 from esphome.const import CONF_ID, CONF_MAC_ADDRESS, CONF_TRIGGER_ID
-from esphome.components.ble_remote_common import CONF_SHARED_KEY, CONF_COMMAND
+from esphome.components.ble_remote_common import CONF_SHARED_KEY, CONF_COMMAND, SHARED_KEY_SCHEMA
 
 CODEOWNERS = ["@mdvorak"]
 DEPENDENCIES = ["esp32_ble_tracker"]
@@ -23,7 +23,7 @@ CONFIG_SCHEMA = cv.Schema(
     {
         cv.GenerateID(): cv.declare_id(BLERemoteReceiver),
         cv.Required(CONF_MAC_ADDRESS): cv.mac_address,
-        cv.Required(CONF_SHARED_KEY): cv.string,
+        cv.Required(CONF_SHARED_KEY): SHARED_KEY_SCHEMA,
         cv.Optional(CONF_ON_COMMAND): automation.validate_automation(
             {
                 cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(

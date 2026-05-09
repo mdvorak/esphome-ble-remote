@@ -3,13 +3,13 @@ substitutions:
 
 esphome:
   name: "${devicename}"
-  min_version: 2025.12.0
+  min_version: 2026.4.0
 
 external_components:
   - source: github://mdvorak/esphome-ble-remote
 
 esp32:
-  board: esp32dev
+  variant: esp32
   framework:
     type: esp-idf
 

@@ -3,7 +3,7 @@ import esphome.config_validation as cv
 from esphome import automation
 from esphome.components import esp32_ble_server
 from esphome.const import CONF_ID
-from esphome.components.ble_remote_common import CONF_SHARED_KEY, CONF_COMMAND
+from esphome.components.ble_remote_common import CONF_SHARED_KEY, CONF_COMMAND, SHARED_KEY_SCHEMA
 
 CODEOWNERS = ["@mdvorak"]
 DEPENDENCIES = ["esp32_ble_server"]
@@ -19,7 +19,7 @@ CONFIG_SCHEMA = cv.Schema(
     {
         cv.GenerateID(): cv.declare_id(BLERemote),
         cv.GenerateID(CONF_BLE_SERVER_ID): cv.use_id(esp32_ble_server.BLEServer),
-        cv.Required(CONF_SHARED_KEY): cv.string,
+        cv.Required(CONF_SHARED_KEY): SHARED_KEY_SCHEMA,
     }
 ).extend(cv.COMPONENT_SCHEMA)
 
@@ -42,6 +42,7 @@ async def to_code(config):
             cv.Required(CONF_COMMAND): cv.hex_uint16_t,
         }
     ),
+    synchronous=True,
 )
 async def ble_remote_write_to_code(config, action_id, template_arg, args):
     var = cg.new_Pvariable(action_id, template_arg)
