@@ -99,7 +99,7 @@ jobs:
             .esphome/idf/tools/ninja
             .esphome/idf/tools/esp32ulp-elf
             .esphome/idf/tools/openocd-esp32
-          key: ${{ runner.os }}-esphome-${{ env.ESPHOME_VER_HASH }}-${{ matrix.toolchain }}
+          key: ${{ runner.os }}-esphome-${{ env.ESPHOME_VER_HASH }}-${{ matrix.esp32_variant }}-${{ matrix.toolchain }}
 
       - name: Build ble_remote
         run: |-
