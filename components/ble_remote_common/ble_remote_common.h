@@ -1,5 +1,6 @@
 #pragma once
 
+#include <psa/crypto.h>
 #include <stdint.h>
 #include <vector>
 
@@ -16,6 +17,21 @@ struct BLERemoteCommandData {
   uint64_t hash{0};
 } __attribute__((packed));
 
-uint64_t ble_remote_calculate_hash(const BLERemoteCommandData &data, const std::vector<uint8_t> &shared_key);
+class BLERemoteHMACKey {
+public:
+  BLERemoteHMACKey() = default;
+  ~BLERemoteHMACKey() { psa_destroy_key(this->key_id_); }
+
+  BLERemoteHMACKey(const BLERemoteHMACKey &) = delete;
+  BLERemoteHMACKey &operator=(const BLERemoteHMACKey &) = delete;
+
+  void setup(const std::vector<uint8_t> &key);
+  uint64_t calculate_hash(const BLERemoteCommandData &data) const;
+  size_t key_size() const { return key_size_; }
+
+private:
+  mbedtls_svc_key_id_t key_id_{MBEDTLS_SVC_KEY_ID_INIT};
+  size_t key_size_{0};
+};
 
 } // namespace esphome::ble_remote
