@@ -4,10 +4,10 @@ substitutions:
 
 esphome:
   name: "${devicename}"
-  min_version: 2026.4.0
+  min_version: 2026.5.0
 
 external_components:
-  - source: github://mdvorak/esphome-ble-remote
+  - source: "./components"
 
 esp32:
   variant: esp32
@@ -33,10 +33,11 @@ esp32_ble_tracker:
 ble_remote_receiver:
   mac_address: "${remote_ble_mac_address}"
   shared_key: !secret ble_remote_shared_key
-  on_toggle:
-    - logger.log:
-        format: "Command %X received"
-        args: [ x ]
+  on_command:
+    - then:
+        - logger.log:
+            format: "Command %X received"
+            args: [ (unsigned int) x ]
     - command: 0x01
       then:
         - logger.log: "Command 01 received"

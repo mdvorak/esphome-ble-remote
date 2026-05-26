@@ -1,6 +1,7 @@
 #include "ble_remote.h"
 #include "esp_random.h"
 #include "esphome/core/log.h"
+#include <inttypes.h>
 
 #include <cstring>
 
@@ -8,9 +9,7 @@ namespace esphome::ble_remote {
 
 static constexpr char TAG[] = "ble_remote";
 
-void BLERemote::setup() {
-  this->send_boot_sentinel_();
-}
+void BLERemote::setup() { this->send_boot_sentinel_(); }
 
 void BLERemote::dump_config() {
   ESP_LOGCONFIG(TAG, "BLE Remote:");
@@ -62,8 +61,8 @@ void BLERemote::write(uint16_t command) {
   bytes[1] = static_cast<uint8_t>((BLE_REMOTE_COMPANY_ID >> 8) & 0xFF);
   std::memcpy(bytes.data() + sizeof(uint16_t), &data, sizeof(BLERemoteCommandData));
 
-  ESP_LOGD(TAG, "Writing BLE remote command 0x%04X nonce %u hash: %016llX", command, nonce, data.hash);
+  ESP_LOGD(TAG, "Writing BLE remote command 0x%04X nonce %" PRIu32 " hash: %016llX", command, nonce, data.hash);
   this->ble_server_->set_manufacturer_data(bytes);
 }
 
-}  // namespace esphome::ble_remote
+} // namespace esphome::ble_remote

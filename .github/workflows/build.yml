@@ -12,12 +12,13 @@ on:
     - cron: '0 4 * * 3' # Every Wednesday at 04:00 UTC
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   esphome_version:
     name: Get ESPHome Version
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     outputs:
       tag: ${{ steps.get_tag.outputs.tag }}
     steps:
@@ -33,8 +34,6 @@ jobs:
   ble_remote:
     name: BLE Remote
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     needs: esphome_version
     strategy:
       matrix:
@@ -43,18 +42,31 @@ jobs:
           - ble_remote_receiver
         esphome_version:
           - ${{ needs.esphome_version.outputs.tag }}
-          - 2025.12.0
-          - beta
-        esp32_board:
-          - esp32dev
-          - esp32-c3-devkitm-1
+        esp32_variant:
+          - esp32
+          - esp32c3
+          - esp32s3
+        toolchain:
+          - platformio
+          - esp-idf
+        include:
+          - esphome_version: "2026.5.0"
+            component: ble_remote
+            esp32_variant: esp32
+            toolchain: platformio
+          - esphome_version: "2026.5.0"
+            component: ble_remote_receiver
+            esp32_variant: esp32
+            toolchain: platformio
     container:
       image: ghcr.io/esphome/esphome:${{ matrix.esphome_version }}
       volumes:
         - /github/home/.cache:/github/home/.cache
         - /github/home/.platformio:/github/home/.platformio
     env:
-      YAML_FILE: example_${matrix.component}.yaml
+      YAML_FILE: example_${{ matrix.component }}.yaml
+      ESPHOME_ESP_IDF_PREFIX: ${{ github.workspace }}/.esphome/idf
+      IDF_CCACHE_ENABLE: 1
     steps:
       - uses: actions/checkout@v6
 
@@ -63,16 +75,16 @@ jobs:
         with:
           cmd: yq -i '.external_components[0].source = "./components"' ${{ env.YAML_FILE }}
 
-      - name: Set esp32 board
+      - name: Set esp32 variant
         uses: mikefarah/yq@v4
         with:
-          cmd: yq -i '.esp32.board = "${{ matrix.esp32_board }}"' ${{ env.YAML_FILE }}
+          cmd: yq -i '.esp32.variant = "${{ matrix.esp32_variant }}"' ${{ env.YAML_FILE }}
 
       - name: Prepare secrets
         run: |-
           echo "wifi_ssid: TEST" >> secrets.yaml
           echo "wifi_password: testtest" >> secrets.yaml
-          echo "ble_remote_shared_key: TEST" >> secrets.yaml
+          echo "ble_remote_shared_key: TEST1234" >> secrets.yaml
 
       - name: Generate cache key
         run: |-
@@ -83,25 +95,34 @@ jobs:
         uses: actions/cache@v5
         with:
           path: |-
+            ~/.cache/ccache
             ~/.cache/pip
             ~/.platformio/.cache
             ~/.platformio/packages
-          key: ${{ runner.os }}-pio-${{ env.ESPHOME_VER_HASH }}-${{ matrix.esp32_board }}
+            .esphome/idf/frameworks
+            .esphome/idf/penvs
+            .esphome/idf/tools/cmake
+            .esphome/idf/tools/ninja
+            .esphome/idf/tools/esp32ulp-elf
+            .esphome/idf/tools/openocd-esp32
+          key: ${{ runner.os }}-esphome-${{ env.ESPHOME_VER_HASH }}-${{ matrix.toolchain }}
 
       - name: Build
-        run: esphome compile "$YAML_FILE"
+        run: esphome --toolchain "$TOOLCHAIN" compile "$YAML_FILE"
+        env:
+          TOOLCHAIN: ${{ matrix.toolchain }}
 
       - name: Add build summary
         if: always()
         run: |
-          echo "- **Device Name:** ${{ matrix.esp32_board }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Device Name:** ${{ matrix.esp32_variant }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Toolchain:** ${{ matrix.toolchain }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Config File:** ${{ env.YAML_FILE }}" >> $GITHUB_STEP_SUMMARY
           echo "- **ESPHome Version:** ${{ env.ESPHOME_VERSION }}" >> $GITHUB_STEP_SUMMARY
 
-  ble_remote_ok:
-    name: BLE Remote
+  build_ok:
+    name: Build
     runs-on: ubuntu-latest
-    permissions: {}
     needs: ble_remote
     steps:
       - run: echo OK

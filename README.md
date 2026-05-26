@@ -1,126 +1,133 @@
-# BLE Remote Component
+# BLE Remote Components
 
-This ESPHome custom component provides both **BLE Remote Transmitter** and **BLE Remote Receiver** functionality in a single unified component.
+Custom ESPHome components for sending and receiving short authenticated commands over BLE
+manufacturer data.
 
-## Features
+The set is split into three components:
 
-- **Transmitter Mode**: Send BLE advertisements using ESP32 BLE Server
-- **Receiver Mode**: Listen for BLE advertisements using ESP32 BLE Tracker
-- **Unified Component**: Both modes use the same namespace and component name
-- **Separate Headers**: Maintains separate `ble_remote.h` and `ble_remote_receiver.h` files
+- `ble_remote_common` — shared support code (HMAC, command struct). Auto-loaded; not declared
+  directly in YAML.
+- `ble_remote` — transmitter. Sends a `(command, nonce, hash)` payload via the ESP32 BLE
+  advertisement.
+- `ble_remote_receiver` — receiver. Listens for advertisements from a known MAC, validates the
+  HMAC against a shared key, and fires automation triggers.
 
-## Configuration
+## Wire format
 
-### Transmitter Mode (BLE Remote)
+Each transmission goes out as BLE manufacturer data (AD type 0xFF):
 
-Use this to send BLE remote signals:
+| Offset | Size  | Field      | Notes                                                                |
+|--------|-------|------------|----------------------------------------------------------------------|
+| 0      | 2 B   | company ID | Fixed `0xFFFF` — the Bluetooth SIG's reserved testing/dev identifier |
+| 2      | 2 B   | command    | User-defined 16-bit command code                                     |
+| 4      | 4 B   | nonce      | Random per-transmission, never zero, never equal to previous nonce   |
+| 8      | 8 B   | hash       | HMAC-SHA256(key, command \|\| nonce) truncated to 8 bytes            |
 
-```yaml
-ble_remote:
-  - id: my_ble_remote
-    ble_server_id: ble_server
-    remote_id: 0x1234
-```
+Total: 16 bytes of manufacturer data. The receiver filters incoming frames to only
+those carrying company ID `0xFFFF` from the configured MAC.
 
-**Required parameters:**
-- `ble_server_id`: Reference to an existing `esp32_ble_server` component
-- `remote_id`: Unique 16-bit hex identifier for this remote
+The receiver maintains a 16-entry replay window of recently-seen valid nonces. To avoid
+replaying a packet captured before reboot, the transmitter broadcasts a `nonce=0` boot
+sentinel from `setup()` until the first real press; the receiver treats `nonce=0` as
+"ready, do not trigger". As a fallback, if the receiver boots while the transmitter is
+already broadcasting a real (non-zero) command, the first valid command after boot is
+absorbed once instead of being replayed.
 
-**Actions:**
-```yaml
-- ble_remote.toggle:
-    id: my_ble_remote
-```
-
-### Receiver Mode (BLE Remote Receiver)
-
-Use this to receive BLE remote signals:
-
-```yaml
-ble_remote:
-  - id: my_ble_receiver
-    mac_address: AA:BB:CC:DD:EE:FF
-    remote_id: 0x1234
-    on_toggle:
-      - logger.log: "Remote toggled!"
-```
-
-**Required parameters:**
-- `mac_address`: MAC address of the transmitter device to listen for
-- `remote_id`: The 16-bit hex identifier to match (must match transmitter's `remote_id`)
-
-**Optional parameters:**
-- `on_toggle`: Automation trigger that fires when the remote value changes
-
-## Example Usage
-
-### Complete Example: Transmitter Device (Remote Control)
+## Transmitter — `ble_remote`
 
 ```yaml
-esphome:
-  name: living-room-switch
-
-esp32:
-  board: esp32dev
-
 esp32_ble_server:
-  id: ble_server
 
 ble_remote:
   id: light_remote
-  ble_server_id: ble_server
-  remote_id: 0xEFFF
+  shared_key: !secret ble_remote_key   # min 8 chars
+```
 
+**Options**
+
+| Option         | Type            | Required | Description                                                      |
+|----------------|-----------------|----------|------------------------------------------------------------------|
+| `id`           | id              | yes      | Component id                                                     |
+| `ble_server_id`| id              | no       | `esp32_ble_server` instance (auto-resolved if only one is defined) |
+| `shared_key`   | string (≥ 8)    | yes      | HMAC key shared with the receiver                                |
+
+**Action: `ble_remote.write`**
+
+```yaml
 button:
   - platform: gpio
     pin: GPIO0
     on_press:
-      - ble_remote.toggle:
+      - ble_remote.write:
           id: light_remote
+          command: 0x0001
 ```
 
-### Complete Example: Receiver Device (Light Controller)
+| Option    | Type             | Required | Description                |
+|-----------|------------------|----------|----------------------------|
+| `id`      | id               | yes      | Target `ble_remote`        |
+| `command` | hex uint16       | yes      | 16-bit command code        |
+
+## Receiver — `ble_remote_receiver`
 
 ```yaml
-esphome:
-  name: living-room-light
-
-esp32:
-  board: esp32dev
-
 esp32_ble_tracker:
   scan_parameters:
     active: false
 
 ble_remote_receiver:
-  id: ble_remote_rx
-  mac_address: "24:0A:C4:XX:XX:XX"  # MAC of transmitter device
-  remote_id: 0xEFFF
-  on_toggle:
-    - lambda: |-
-        ESP_LOGI("ble_remote_rx", "Switch toggle detected: %u", x);
-    - light.toggle: main_light
-
-light:
-  - platform: binary
-    id: main_light
-    output: light_output
+  id: light_rx
+  setup_priority: -900                 # set up after other components if needed
+  mac_address: "24:0A:C4:XX:XX:XX"     # MAC of the transmitter
+  shared_key: !secret ble_remote_key   # must match transmitter
+  on_command:
+    - command: 0x0001
+      then:
+        - light.toggle: main_light
+    - then:
+        - lambda: |-
+            ESP_LOGI("ble_remote", "received command 0x%04X", x);
 ```
 
-## How It Works
+**Options**
 
-The **ble_remote** component (transmitter) sends a random 32-bit value via BLE manufacturer data each time its `toggle()` action is called. The **ble_remote_receiver** component (receiver) listens for BLE advertisements from a specific MAC address and triggers automations when the transmitted value changes.
+| Option        | Type            | Required | Description                                |
+|---------------|-----------------|----------|--------------------------------------------|
+| `id`          | id              | yes      | Component id                               |
+| `mac_address` | mac             | yes      | MAC of the transmitter to listen for       |
+| `shared_key`  | string (≥ 8)    | yes      | Must match the transmitter's shared key    |
+| `on_command`  | automation list | no       | Triggers fired on validated commands       |
 
-## Technical Details
+**Trigger: `on_command`**
 
-### Transmitter (ble_remote)
-- **Namespace**: `ble_remote`
-- **Class**: `BLERemote`
-- **Dependency**: `esp32_ble_server`
-- **Protocol**: Uses BLE manufacturer data with `remote_id` as manufacturer UUID
+Each entry under `on_command` is an automation. Optional `command:` filter limits the trigger
+to a specific 16-bit code; omit it to receive all validated commands. The trigger exposes the
+received command as `x` (`uint32_t`).
 
-### Receiver (ble_remote_receiver)
-- **Namespace**: `ble_remote` (shared namespace)
-- **Class**: `BLERemoteReceiver`
-- **Dependency**: `esp32_ble_tracker`
-- **Trigger**: Provides `on_toggle` automation trigger with uint32 parameter
+| Option    | Type        | Required | Description                                            |
+|-----------|-------------|----------|--------------------------------------------------------|
+| `command` | hex uint16  | no       | If set, fire only when the received command matches    |
+
+## Security notes
+
+This component is sized for normal home switches: lights, fans, scenes. It's intended to keep
+random nearby BLE chatter from triggering your switches, not to withstand a focused attacker.
+
+- Each packet is authenticated by HMAC-SHA256 over `(command, nonce)` keyed with the shared
+  key, so anyone without the key can't fabricate or alter commands by sniffing the air.
+- A 16-entry replay window plus a `nonce=0` boot sentinel (and a fallback skip of the first
+  valid packet after boot) handles incidental re-broadcasts and short-term cross-reboot replays.
+- BLE itself can't be made fully tamper-proof on commodity hardware — the keys live in flash,
+  advertisements are public, and a determined attacker on-site can always do more. If you're
+  building anything safety-critical (locks, garage doors, alarms), use a different transport
+  (Wi-Fi+TLS, Matter, Zigbee with proper pairing); don't try to harden this component up to
+  that bar.
+
+## Layout
+
+```
+ble_components/
+  ble_remote_common/   # shared header, HMAC implementation
+  ble_remote/          # transmitter component + ble_remote.write action
+  ble_remote_receiver/ # receiver component + on_command trigger
+```

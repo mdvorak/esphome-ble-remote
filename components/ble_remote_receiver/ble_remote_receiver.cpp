@@ -1,6 +1,7 @@
 #include "ble_remote_receiver.h"
 #include "esphome/core/log.h"
 
+#include <cinttypes>
 #include <cstring>
 #include <optional>
 
@@ -49,8 +50,8 @@ bool BLERemoteReceiver::parse_device(const esp32_ble_tracker::ESPBTDevice &devic
   for (const auto &data : device.get_manufacturer_datas()) {
     auto parsed = parse_ble_remote_command_data(data);
     if (!parsed) {
-      ESP_LOGD(TAG, "Unable to parse BLE remote command data: uuid len %u data size %u",
-               data.uuid.get_uuid().len, data.data.size());
+      ESP_LOGD(TAG, "Unable to parse BLE remote command data: uuid len %u data size %u", data.uuid.get_uuid().len,
+               data.data.size());
       continue;
     }
     const auto &command_data = *parsed;
@@ -58,7 +59,7 @@ bool BLERemoteReceiver::parse_device(const esp32_ble_tracker::ESPBTDevice &devic
     // Authenticate before touching any receiver state.
     const auto expected_hash = ble_remote_calculate_hash(command_data, this->shared_key_);
     if (command_data.hash != expected_hash) {
-      ESP_LOGD(TAG, "Invalid BLE remote command data: command 0x%04X nonce %u hash %016llX",
+      ESP_LOGD(TAG, "Invalid BLE remote command data: command 0x%04X nonce %" PRIu32 " hash %016llX",
                command_data.command, command_data.nonce, command_data.hash);
       continue;
     }
@@ -85,11 +86,11 @@ bool BLERemoteReceiver::parse_device(const esp32_ble_tracker::ESPBTDevice &devic
     // command (non-zero nonce), absorb it once instead of replaying that pre-reboot press.
     if (!this->initialized_) {
       this->initialized_ = true;
-      ESP_LOGD(TAG, "Initialized with nonce %u", command_data.nonce);
+      ESP_LOGD(TAG, "Initialized with nonce %" PRIu32, command_data.nonce);
       return true;
     }
 
-    ESP_LOGD(TAG, "Command 0x%04X with nonce %u", command_data.command, command_data.nonce);
+    ESP_LOGD(TAG, "Command 0x%04X with nonce %" PRIu32, command_data.command, command_data.nonce);
     for (auto *trigger : this->on_command_triggers_) {
       if (!trigger->has_command() || trigger->command() == command_data.command) {
         trigger->trigger(command_data.command);
@@ -102,4 +103,4 @@ bool BLERemoteReceiver::parse_device(const esp32_ble_tracker::ESPBTDevice &devic
   return true;
 }
 
-}  // namespace esphome::ble_remote
+} // namespace esphome::ble_remote

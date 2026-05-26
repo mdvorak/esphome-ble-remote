@@ -3,16 +3,8 @@
 #include <cstddef>
 #include <cstring>
 
-// mbedtls 4.0 (shipped with ESP-IDF 6.0) removed the legacy mbedtls_md HMAC API.
-// On IDF 6.0+ use the PSA Crypto MAC API; otherwise stay on the legacy API.
 #if defined(USE_ESP32)
-#include <esp_idf_version.h>
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
-#define BLE_REMOTE_USE_PSA
 #include <psa/crypto.h>
-#else
-#include "mbedtls/md.h"
-#endif
 #else
 #include "mbedtls/md.h"
 #endif
@@ -26,7 +18,7 @@ uint64_t ble_remote_calculate_hash(const BLERemoteCommandData &data, const std::
   // HMAC-SHA256 over (command || nonce), keyed with shared_key. Truncated to 8 bytes for wire format.
   uint8_t digest[32]{};
 
-#ifdef BLE_REMOTE_USE_PSA
+#if defined(USE_ESP32)
   psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
   psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_SIGN_MESSAGE);
   psa_set_key_algorithm(&attributes, PSA_ALG_HMAC(PSA_ALG_SHA_256));
@@ -48,4 +40,4 @@ uint64_t ble_remote_calculate_hash(const BLERemoteCommandData &data, const std::
   return result;
 }
 
-}  // namespace esphome::ble_remote
+} // namespace esphome::ble_remote

@@ -3,10 +3,10 @@ substitutions:
 
 esphome:
   name: "${devicename}"
-  min_version: 2026.4.0
+  min_version: 2026.5.0
 
 external_components:
-  - source: github://mdvorak/esphome-ble-remote
+  - source: "./components"
 
 esp32:
   variant: esp32
@@ -35,12 +35,12 @@ button:
   - platform: template
     name: Command 01
     on_press:
-      - ble_remote.toggle:
+      - ble_remote.write:
           id: sample_remote
           command: 0x01
   - platform: template
     name: Command 02
     on_press:
-      - ble_remote.toggle:
+      - ble_remote.write:
           id: sample_remote
           command: 0x02
