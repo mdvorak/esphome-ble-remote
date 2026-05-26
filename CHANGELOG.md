@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.1](https://github.com/mdvorak/esphome-ble-remote/compare/v1.0.0...v1.0.1) (2026-05-26)
+
+
+### Bug Fixes
+
+* use PSA crypto exclusively, drop mbedTLS fallback, call psa_crypto_init ([0074c0c](https://github.com/mdvorak/esphome-ble-remote/commit/0074c0c493a3e79645c01f0c8bac6a2aab25af59))
+* wrap PSA HMAC key in BLERemoteHMACKey class ([5eda6b1](https://github.com/mdvorak/esphome-ble-remote/commit/5eda6b1125fd1d36f3b5438ee65a3479fdc71932))
+
 ## 1.0.0 (2026-05-26)
 
 
