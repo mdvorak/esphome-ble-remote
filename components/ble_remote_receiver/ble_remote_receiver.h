@@ -31,7 +31,7 @@ protected:
 // BLE Remote Receiver Component
 class BLERemoteReceiver : public Component, public esp32_ble_tracker::ESPBTDeviceListener {
 public:
-  void set_shared_key(const std::string &shared_key) { this->shared_key_.assign(shared_key.begin(), shared_key.end()); }
+  void set_shared_key(const std::string &key) { this->hmac_key_.setup(std::vector<uint8_t>(key.begin(), key.end())); }
   void set_mac_address(uint64_t mac_address) { this->mac_address_ = mac_address; }
 
   void dump_config() override;
@@ -49,7 +49,7 @@ protected:
   void record_nonce_(uint32_t nonce);
 
   uint64_t mac_address_{0};
-  std::vector<uint8_t> shared_key_;
+  BLERemoteHMACKey hmac_key_;
   std::array<uint32_t, REPLAY_WINDOW_SIZE> recent_nonces_{};
   size_t recent_nonces_pos_{0};
   bool initialized_{false};

@@ -14,7 +14,7 @@ void BLERemote::setup() { this->send_boot_sentinel_(); }
 void BLERemote::dump_config() {
   ESP_LOGCONFIG(TAG, "BLE Remote:");
   ESP_LOGCONFIG(TAG, "  BLE Server: %s", this->ble_server_ != nullptr ? "attached" : "missing");
-  ESP_LOGCONFIG(TAG, "  Shared Key: %u bytes", shared_key_.size());
+  ESP_LOGCONFIG(TAG, "  Shared Key: %u bytes", this->hmac_key_.key_size());
 }
 
 void BLERemote::send_boot_sentinel_() {
@@ -25,7 +25,7 @@ void BLERemote::send_boot_sentinel_() {
   BLERemoteCommandData data{};
   data.command = 0;
   data.nonce = 0;
-  data.hash = ble_remote_calculate_hash(data, this->shared_key_);
+  data.hash = this->hmac_key_.calculate_hash(data);
 
   std::vector<uint8_t> bytes(sizeof(uint16_t) + sizeof(BLERemoteCommandData));
   bytes[0] = static_cast<uint8_t>(BLE_REMOTE_COMPANY_ID & 0xFF);
@@ -53,9 +53,9 @@ void BLERemote::write(uint16_t command) {
   BLERemoteCommandData data{};
   data.command = command;
   data.nonce = nonce;
-  data.hash = ble_remote_calculate_hash(data, this->shared_key_);
+  data.hash = this->hmac_key_.calculate_hash(data);
 
-  // Wire format: [Company ID 0xFFFF] [BLERemoteCommandData (10 B)].
+  // Wire format: [Company ID 0xFFFF (2 B)] [BLERemoteCommandData (14 B)].
   std::vector<uint8_t> bytes(sizeof(uint16_t) + sizeof(BLERemoteCommandData));
   bytes[0] = static_cast<uint8_t>(BLE_REMOTE_COMPANY_ID & 0xFF);
   bytes[1] = static_cast<uint8_t>((BLE_REMOTE_COMPANY_ID >> 8) & 0xFF);

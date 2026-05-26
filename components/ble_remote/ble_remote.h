@@ -14,7 +14,7 @@ namespace esphome::ble_remote {
 class BLERemote : public Component {
 public:
   void set_ble_server(esp32_ble_server::BLEServer *server) { this->ble_server_ = server; }
-  void set_shared_key(const std::string &shared_key) { this->shared_key_.assign(shared_key.begin(), shared_key.end()); }
+  void set_shared_key(const std::string &key) { this->hmac_key_.setup(std::vector<uint8_t>(key.begin(), key.end())); }
 
   void setup() override;
   void dump_config() override;
@@ -28,7 +28,7 @@ protected:
   void send_boot_sentinel_();
 
   esp32_ble_server::BLEServer *ble_server_{nullptr};
-  std::vector<uint8_t> shared_key_;
+  BLERemoteHMACKey hmac_key_;
   uint32_t last_nonce_{0};
 };
 

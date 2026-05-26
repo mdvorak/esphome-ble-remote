@@ -1,35 +1,45 @@
 #include "ble_remote_common.h"
+#include "esphome/core/log.h"
 
 #include <cstddef>
-#include <cstring>
-#include <psa/crypto.h>
 
 namespace esphome::ble_remote {
 
-uint64_t ble_remote_calculate_hash(const BLERemoteCommandData &data, const std::vector<uint8_t> &shared_key) {
-  const uint8_t *data_bytes = reinterpret_cast<const uint8_t *>(&data);
-  const size_t data_len = offsetof(BLERemoteCommandData, hash);
+static constexpr char TAG[] = "ble_remote";
+static constexpr psa_algorithm_t HMAC_ALG = PSA_ALG_TRUNCATED_MAC(PSA_ALG_HMAC(PSA_ALG_SHA_256), sizeof(uint64_t));
 
-  // HMAC-SHA256 over (command || nonce), keyed with shared_key. Truncated to 8 bytes for wire format.
-  uint8_t digest[32]{};
+void BLERemoteHMACKey::setup(const std::vector<uint8_t> &key) {
+  this->key_size_ = key.size();
 
   psa_crypto_init();
 
   psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
   psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_SIGN_MESSAGE);
-  psa_set_key_algorithm(&attributes, PSA_ALG_HMAC(PSA_ALG_SHA_256));
+  psa_set_key_algorithm(&attributes, HMAC_ALG);
   psa_set_key_type(&attributes, PSA_KEY_TYPE_HMAC);
 
-  mbedtls_svc_key_id_t key_id = MBEDTLS_SVC_KEY_ID_INIT;
-  if (psa_import_key(&attributes, shared_key.data(), shared_key.size(), &key_id) == PSA_SUCCESS) {
-    size_t mac_len = 0;
-    psa_mac_compute(key_id, PSA_ALG_HMAC(PSA_ALG_SHA_256), data_bytes, data_len, digest, sizeof(digest), &mac_len);
-    psa_destroy_key(key_id);
+  psa_destroy_key(this->key_id_);
+  this->key_id_ = MBEDTLS_SVC_KEY_ID_INIT;
+
+  psa_status_t status = psa_import_key(&attributes, key.data(), key.size(), &this->key_id_);
+  if (status != PSA_SUCCESS) {
+    ESP_LOGE(TAG, "psa_import_key failed: %d", (int)status);
+  }
+}
+
+uint64_t BLERemoteHMACKey::calculate_hash(const BLERemoteCommandData &data) const {
+  const uint8_t *data_bytes = reinterpret_cast<const uint8_t *>(&data);
+  const size_t data_len = offsetof(BLERemoteCommandData, hash);
+
+  uint64_t digest = 0;
+  size_t mac_len = 0;
+  psa_status_t status = psa_mac_compute(this->key_id_, HMAC_ALG, data_bytes, data_len,
+                                        reinterpret_cast<uint8_t *>(&digest), sizeof(digest), &mac_len);
+  if (status != PSA_SUCCESS) {
+    ESP_LOGW(TAG, "psa_mac_compute failed: %d", (int)status);
   }
 
-  uint64_t result;
-  std::memcpy(&result, digest, sizeof(result));
-  return result;
+  return digest;
 }
 
 } // namespace esphome::ble_remote

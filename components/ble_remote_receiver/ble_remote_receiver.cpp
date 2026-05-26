@@ -12,7 +12,7 @@ static constexpr char TAG[] = "ble_remote";
 void BLERemoteReceiver::dump_config() {
   ESP_LOGCONFIG(TAG, "BLE Remote Receiver:");
   ESP_LOGCONFIG(TAG, "  Remote MAC Address: %012llX", this->mac_address_);
-  ESP_LOGCONFIG(TAG, "  Shared Key: %u bytes", shared_key_.size());
+  ESP_LOGCONFIG(TAG, "  Shared Key: %u bytes", this->hmac_key_.key_size());
 }
 
 static std::optional<BLERemoteCommandData> parse_ble_remote_command_data(const esp32_ble_tracker::ServiceData &data) {
@@ -57,7 +57,7 @@ bool BLERemoteReceiver::parse_device(const esp32_ble_tracker::ESPBTDevice &devic
     const auto &command_data = *parsed;
 
     // Authenticate before touching any receiver state.
-    const auto expected_hash = ble_remote_calculate_hash(command_data, this->shared_key_);
+    const auto expected_hash = this->hmac_key_.calculate_hash(command_data);
     if (command_data.hash != expected_hash) {
       ESP_LOGD(TAG, "Invalid BLE remote command data: command 0x%04X nonce %" PRIu32 " hash %016llX",
                command_data.command, command_data.nonce, command_data.hash);
