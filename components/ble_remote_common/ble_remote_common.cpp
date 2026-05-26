@@ -2,12 +2,7 @@
 
 #include <cstddef>
 #include <cstring>
-
-#if defined(USE_ESP32)
 #include <psa/crypto.h>
-#else
-#include "mbedtls/md.h"
-#endif
 
 namespace esphome::ble_remote {
 
@@ -18,7 +13,8 @@ uint64_t ble_remote_calculate_hash(const BLERemoteCommandData &data, const std::
   // HMAC-SHA256 over (command || nonce), keyed with shared_key. Truncated to 8 bytes for wire format.
   uint8_t digest[32]{};
 
-#if defined(USE_ESP32)
+  psa_crypto_init();
+
   psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
   psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_SIGN_MESSAGE);
   psa_set_key_algorithm(&attributes, PSA_ALG_HMAC(PSA_ALG_SHA_256));
@@ -30,10 +26,6 @@ uint64_t ble_remote_calculate_hash(const BLERemoteCommandData &data, const std::
     psa_mac_compute(key_id, PSA_ALG_HMAC(PSA_ALG_SHA_256), data_bytes, data_len, digest, sizeof(digest), &mac_len);
     psa_destroy_key(key_id);
   }
-#else
-  const mbedtls_md_info_t *md_info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
-  mbedtls_md_hmac(md_info, shared_key.data(), shared_key.size(), data_bytes, data_len, digest);
-#endif
 
   uint64_t result;
   std::memcpy(&result, digest, sizeof(result));
