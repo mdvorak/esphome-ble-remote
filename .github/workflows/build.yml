@@ -106,16 +106,18 @@ jobs:
           key: ${{ runner.os }}-esphome-${{ env.ESPHOME_VER_HASH }}-${{ matrix.toolchain }}
 
       - name: Build ble_remote
-        run: esphome --toolchain "$TOOLCHAIN" compile example_ble_remote.yaml
+        run: |-
+          export CCACHE_BASEDIR="$GITHUB_WORKSPACE/.esphome/build/ble-remote"
+          esphome --toolchain "$TOOLCHAIN" compile example_ble_remote.yaml
         env:
           TOOLCHAIN: ${{ matrix.toolchain }}
-          CCACHE_BASEDIR: "${{ github.workspace }}/.esphome/build/ble-remote"
 
       - name: Build ble_remote_receiver
-        run: esphome --toolchain "$TOOLCHAIN" compile example_ble_remote_receiver.yaml
+        run: |-
+          export CCACHE_BASEDIR="$GITHUB_WORKSPACE/.esphome/build/ble-remote-receiver"
+          esphome --toolchain "$TOOLCHAIN" compile example_ble_remote_receiver.yaml
         env:
           TOOLCHAIN: ${{ matrix.toolchain }}
-          CCACHE_BASEDIR: "${{ github.workspace }}/.esphome/build/ble-remote-receiver"
 
       - name: ccache stats
         if: matrix.toolchain == 'esp-idf'
