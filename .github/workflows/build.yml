@@ -52,13 +52,9 @@ jobs:
             toolchain: platformio
     container:
       image: ghcr.io/esphome/esphome:${{ matrix.esphome_version }}
-      volumes:
-        - /github/home/.cache:/github/home/.cache
-        - /github/home/.platformio:/github/home/.platformio
     env:
-      ESPHOME_ESP_IDF_PREFIX: ${{ github.workspace }}/.esphome/idf
       IDF_CCACHE_ENABLE: 1
-      CCACHE_NOHASHDIR: "1"
+      CCACHE_NOHASHDIR: 1
       CCACHE_SLOPPINESS: "file_stat_matches,include_file_mtime,include_file_ctime,time_macros"
     steps:
       - uses: actions/checkout@v6
@@ -107,14 +103,14 @@ jobs:
 
       - name: Build ble_remote
         run: |-
-          export CCACHE_BASEDIR="$GITHUB_WORKSPACE/.esphome/build/ble-remote"
+          export CCACHE_BASEDIR="$(pwd)/.esphome/build/ble-remote"
           esphome --toolchain "$TOOLCHAIN" compile example_ble_remote.yaml
         env:
           TOOLCHAIN: ${{ matrix.toolchain }}
 
       - name: Build ble_remote_receiver
         run: |-
-          export CCACHE_BASEDIR="$GITHUB_WORKSPACE/.esphome/build/ble-remote-receiver"
+          export CCACHE_BASEDIR="$(pwd)/.esphome/build/ble-remote-receiver"
           esphome --toolchain "$TOOLCHAIN" compile example_ble_remote_receiver.yaml
         env:
           TOOLCHAIN: ${{ matrix.toolchain }}
