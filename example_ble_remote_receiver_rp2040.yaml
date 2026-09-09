@@ -1,0 +1,42 @@
+substitutions:
+  devicename: ble-remote-receiver-rp2040
+  remote_ble_mac_address: "00:11:22:33:44:55"
+
+# Same ble_remote_receiver block as example_ble_remote_receiver.yaml, on a
+# different chip. ble_remote_receiver binds to whichever BLE tracker hub the
+# configuration declares, so only the platform and tracker blocks differ.
+
+esphome:
+  name: "${devicename}"
+  min_version: 2026.8.0
+
+external_components:
+  - source: "./components"
+
+rp2:
+  board: rpipicow
+
+logger:
+
+ota:
+  platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "${devicename}-AP"
+
+rp2_ble_tracker:
+
+ble_remote_receiver:
+  mac_address: "${remote_ble_mac_address}"
+  shared_key: !secret ble_remote_shared_key
+  on_command:
+    - then:
+        - logger.log:
+            format: "Command %X received"
+            args: [ (unsigned int) x ]
+    - command: 0x01
+      then:
+        - logger.log: "Command 01 received"
