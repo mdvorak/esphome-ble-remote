@@ -47,7 +47,7 @@ jobs:
           - platformio
           - esp-idf
         include:
-          - esphome_version: "2026.5.0"
+          - esphome_version: "2026.8.0"
             esp32_variant: esp32
             toolchain: platformio
     container:

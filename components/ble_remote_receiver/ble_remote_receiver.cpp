@@ -15,9 +15,10 @@ void BLERemoteReceiver::dump_config() {
   ESP_LOGCONFIG(TAG, "  Shared Key: %u bytes", this->hmac_key_.key_size());
 }
 
-static std::optional<BLERemoteCommandData> parse_ble_remote_command_data(const esp32_ble_tracker::ServiceData &data) {
-  const auto data_uuid = data.uuid.get_uuid();
-  if (data_uuid.len != 2 || data_uuid.uuid.uuid16 != BLE_REMOTE_COMPANY_ID ||
+static std::optional<BLERemoteCommandData> parse_ble_remote_command_data(const ble_device_base::ServiceData &data) {
+  // The advertisement parser strips the 2-byte company ID into the UUID, so data.data
+  // holds the payload alone.
+  if (data.uuid.type() != ble_device_base::ESPBTUUID::Type::UUID16 || data.uuid.uuid16() != BLE_REMOTE_COMPANY_ID ||
       data.data.size() != sizeof(BLERemoteCommandData)) {
     return std::nullopt;
   }
@@ -41,7 +42,7 @@ void BLERemoteReceiver::record_nonce_(uint32_t nonce) {
   this->recent_nonces_pos_ = (this->recent_nonces_pos_ + 1) % REPLAY_WINDOW_SIZE;
 }
 
-bool BLERemoteReceiver::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
+bool BLERemoteReceiver::parse_device(const ble_device_base::ESPBTDevice &device) {
   // Check if MAC address matches
   if (device.address_uint64() != this->mac_address_) {
     return false;
@@ -50,8 +51,8 @@ bool BLERemoteReceiver::parse_device(const esp32_ble_tracker::ESPBTDevice &devic
   for (const auto &data : device.get_manufacturer_datas()) {
     auto parsed = parse_ble_remote_command_data(data);
     if (!parsed) {
-      ESP_LOGD(TAG, "Unable to parse BLE remote command data: uuid len %u data size %u", data.uuid.get_uuid().len,
-               data.data.size());
+      ESP_LOGD(TAG, "Unable to parse BLE remote command data: uuid type %u data size %u",
+               static_cast<unsigned>(data.uuid.type()), data.data.size());
       continue;
     }
     const auto &command_data = *parsed;
