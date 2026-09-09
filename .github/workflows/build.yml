@@ -52,18 +52,8 @@ jobs:
             toolchain: platformio
     container:
       image: ghcr.io/esphome/esphome:${{ matrix.esphome_version }}
-    env:
-      IDF_CCACHE_ENABLE: 1
-      CCACHE_NOHASHDIR: 1
-      CCACHE_SLOPPINESS: "file_stat_matches,include_file_mtime,include_file_ctime,time_macros"
     steps:
       - uses: actions/checkout@v7
-
-      - name: Install ccache
-        if: matrix.toolchain == 'esp-idf'
-        run: |-
-          apt-get update -qq
-          apt-get install -y -qq --no-install-recommends ccache
 
       - name: Set local component path and variant
         uses: mikefarah/yq@v4
@@ -103,21 +93,15 @@ jobs:
 
       - name: Build ble_remote
         run: |-
-          export CCACHE_BASEDIR="$(pwd)/.esphome/build/ble-remote"
           esphome --toolchain "$TOOLCHAIN" compile example_ble_remote.yaml
         env:
           TOOLCHAIN: ${{ matrix.toolchain }}
 
       - name: Build ble_remote_receiver
         run: |-
-          export CCACHE_BASEDIR="$(pwd)/.esphome/build/ble-remote-receiver"
           esphome --toolchain "$TOOLCHAIN" compile example_ble_remote_receiver.yaml
         env:
           TOOLCHAIN: ${{ matrix.toolchain }}
-
-      - name: ccache stats
-        if: matrix.toolchain == 'esp-idf'
-        run: ccache -s
 
       - name: Add build summary
         if: always()
