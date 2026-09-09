@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.2.0](https://github.com/mdvorak/esphome-ble-remote/compare/v1.1.0...v1.2.0) (2026-09-09)
+
+
+### Features
+
+* adopt ESPHome's platform-neutral BLE layer ([e983a9d](https://github.com/mdvorak/esphome-ble-remote/commit/e983a9d193ae74fa0086c73cb23436c5ec6f0d9c))
+* bump esphome/esphome from 2026.8.0 to 2026.8.1 ([b87501f](https://github.com/mdvorak/esphome-ble-remote/commit/b87501facdd63de473d93cde01ccacaa74efb216))
+* bump esphome/esphome from 2026.8.1 to 2026.8.2 ([e4c2d4d](https://github.com/mdvorak/esphome-ble-remote/commit/e4c2d4d69f6019578d16dcf563cea8a76d291705))
+
 ## [1.1.0](https://github.com/mdvorak/esphome-ble-remote/compare/v1.0.1...v1.1.0) (2026-08-20)
 
 
