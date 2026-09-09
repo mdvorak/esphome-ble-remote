@@ -32,7 +32,7 @@ jobs:
           echo "Using ESPHome version: **${TAG}**" >> $GITHUB_STEP_SUMMARY
 
   ble_remote:
-    name: BLE Remote
+    name: ESP32 BLE Remote
     runs-on: ubuntu-latest
     needs: esphome_version
     strategy:
@@ -110,9 +110,61 @@ jobs:
           echo "- **Toolchain:** ${{ matrix.toolchain }}" >> $GITHUB_STEP_SUMMARY
           echo "- **ESPHome Version:** ${{ env.ESPHOME_VERSION }}" >> $GITHUB_STEP_SUMMARY
 
+  ble_remote_receiver_rp2040:
+    name: RP2040 BLE Remote Receiver
+    runs-on: ubuntu-latest
+    needs: esphome_version
+    strategy:
+      matrix:
+        esphome_version:
+          - ${{ needs.esphome_version.outputs.tag }}
+    container:
+      image: ghcr.io/esphome/esphome:${{ matrix.esphome_version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set local component path
+        uses: mikefarah/yq@v4
+        with:
+          cmd: |
+            yq -i '.external_components[0].source = "./components"' example_ble_remote_receiver_rp2040.yaml
+
+      - name: Prepare secrets
+        run: |-
+          echo "wifi_ssid: TEST" >> secrets.yaml
+          echo "wifi_password: testtest" >> secrets.yaml
+          echo "ble_remote_shared_key: TEST1234" >> secrets.yaml
+
+      - name: Generate cache key
+        run: |-
+          echo "ESPHOME_VERSION=$(esphome version)" >> $GITHUB_ENV
+          echo "ESPHOME_VER_HASH=$(esphome version | sha256sum | cut -d' ' -f1)" >> $GITHUB_ENV
+
+      - name: Cache dependencies
+        uses: actions/cache@v6
+        with:
+          path: |-
+            ~/.cache/ccache
+            ~/.cache/pip
+            ~/.platformio/.cache
+            ~/.platformio/packages
+          key: ${{ runner.os }}-esphome-${{ env.ESPHOME_VER_HASH }}-rp2040
+
+      - name: Build ble_remote_receiver
+        run: |-
+          esphome compile example_ble_remote_receiver_rp2040.yaml
+
+      - name: Add build summary
+        if: always()
+        run: |
+          echo "- **Platform:** RP2040 (rpipicow)" >> $GITHUB_STEP_SUMMARY
+          echo "- **ESPHome Version:** ${{ env.ESPHOME_VERSION }}" >> $GITHUB_STEP_SUMMARY
+
   build_ok:
     name: Build
     runs-on: ubuntu-latest
-    needs: ble_remote
+    needs:
+      - ble_remote
+      - ble_remote_receiver_rp2040
     steps:
       - run: echo OK
