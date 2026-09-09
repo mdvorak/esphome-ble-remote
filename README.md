@@ -12,6 +12,22 @@ The set is split into three components:
 - `ble_remote_receiver` — receiver. Listens for advertisements from a known MAC, validates the
   HMAC against a shared key, and fires automation triggers.
 
+## Requirements and platform support
+
+Requires ESPHome **2026.8.0 or newer**. The components build on ESPHome's platform-neutral BLE
+layer (`ble_device_base`) and the upstream `hmac_sha256` component.
+
+| Component             | Platforms                                                      |
+|-----------------------|----------------------------------------------------------------|
+| `ble_remote_receiver` | Any platform providing a BLE tracker hub: ESP32, RP2040/RP2350 W (`rp2_ble_tracker`), BK72xx (`bk72xx_ble_tracker`), LN882x (`ln882h_ble_tracker`) |
+| `ble_remote`          | ESP32 only                                                     |
+
+The receiver is platform-neutral: it is a `ble_device_base` listener and binds to whichever tracker
+the configuration declares. The transmitter is ESP32-only because ESPHome has no platform-neutral
+BLE advertising layer — `set_manufacturer_data` exists only on `esp32_ble_server`, and
+`zephyr_ble_server` has no runtime manufacturer-data path at all. nRF52/Zephyr supports neither side
+(it has no BLE scanning either).
+
 ## Wire format
 
 Each transmission goes out as BLE manufacturer data (AD type 0xFF):
@@ -50,6 +66,10 @@ ble_remote:
 | `id`           | id              | yes      | Component id                                                     |
 | `ble_server_id`| id              | no       | `esp32_ble_server` instance (auto-resolved if only one is defined) |
 | `shared_key`   | string (≥ 8)    | yes      | HMAC key shared with the receiver                                |
+
+> **Note:** `esp32_ble_server` has its own `manufacturer_data:` option that writes the same single
+> advertising slot this component writes — last writer wins. Don't set both. Each `ble_remote.write`
+> also restarts the advertisement, so this is sized for button presses, not high-rate broadcasting.
 
 **Action: `ble_remote.write`**
 
@@ -94,9 +114,13 @@ ble_remote_receiver:
 | Option        | Type            | Required | Description                                |
 |---------------|-----------------|----------|--------------------------------------------|
 | `id`          | id              | yes      | Component id                               |
+| `ble_hub_id`  | id              | no       | BLE tracker hub to listen on (auto-resolved if only one is defined) |
 | `mac_address` | mac             | yes      | MAC of the transmitter to listen for       |
 | `shared_key`  | string (≥ 8)    | yes      | Must match the transmitter's shared key    |
 | `on_command`  | automation list | no       | Triggers fired on validated commands       |
+
+The legacy `esp32_ble_id:` key is still accepted and auto-migrated to `ble_hub_id:` with a warning;
+ESPHome removes it in 2027.2.0.
 
 **Trigger: `on_command`**
 
@@ -114,7 +138,9 @@ This component is sized for normal home switches: lights, fans, scenes. It's int
 random nearby BLE chatter from triggering your switches, not to withstand a focused attacker.
 
 - Each packet is authenticated by HMAC-SHA256 over `(command, nonce)` keyed with the shared
-  key, so anyone without the key can't fabricate or alter commands by sniffing the air.
+  key (via ESPHome's `hmac_sha256` component), so anyone without the key can't fabricate or alter
+  commands by sniffing the air. Nonces come from `esphome::random_bytes()`, the platform's
+  cryptographically secure RNG.
 - A 16-entry replay window plus a `nonce=0` boot sentinel (and a fallback skip of the first
   valid packet after boot) handles incidental re-broadcasts and short-term cross-reboot replays.
 - BLE itself can't be made fully tamper-proof on commodity hardware — the keys live in flash,

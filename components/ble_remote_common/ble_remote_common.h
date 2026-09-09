@@ -1,7 +1,8 @@
 #pragma once
 
-#include <psa/crypto.h>
+#include <cstddef>
 #include <stdint.h>
+#include <utility>
 #include <vector>
 
 namespace esphome::ble_remote {
@@ -19,19 +20,15 @@ struct BLERemoteCommandData {
 
 class BLERemoteHMACKey {
 public:
-  BLERemoteHMACKey() = default;
-  ~BLERemoteHMACKey() { psa_destroy_key(this->key_id_); }
-
-  BLERemoteHMACKey(const BLERemoteHMACKey &) = delete;
-  BLERemoteHMACKey &operator=(const BLERemoteHMACKey &) = delete;
-
-  void setup(const std::vector<uint8_t> &key);
+  void setup(std::vector<uint8_t> key) { this->key_ = std::move(key); }
+  // HMAC-SHA256 over the struct up to (excluding) the hash field, truncated to
+  // its leftmost 8 bytes. The truncation matches the on-air format and must not
+  // change; see the wire format table in the README.
   uint64_t calculate_hash(const BLERemoteCommandData &data) const;
-  size_t key_size() const { return key_size_; }
+  size_t key_size() const { return this->key_.size(); }
 
 private:
-  mbedtls_svc_key_id_t key_id_{MBEDTLS_SVC_KEY_ID_INIT};
-  size_t key_size_{0};
+  std::vector<uint8_t> key_;
 };
 
 } // namespace esphome::ble_remote

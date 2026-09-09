@@ -1,7 +1,7 @@
 #pragma once
 
+#include "esphome/components/ble_device_base/ble_device.h"
 #include "esphome/components/ble_remote_common/ble_remote_common.h"
-#include "esphome/components/esp32_ble_tracker/esp32_ble_tracker.h"
 #include "esphome/core/automation.h"
 #include "esphome/core/component.h"
 
@@ -28,15 +28,18 @@ protected:
   bool has_command_{false};
 };
 
-// BLE Remote Receiver Component
-class BLERemoteReceiver : public Component, public esp32_ble_tracker::ESPBTDeviceListener {
+// BLE Remote Receiver Component.
+// No platform #ifdef: ble_device_base provides the BLE types on every platform, and this
+// component is only compiled when configured -- which requires a BLE hub -- so it builds on
+// any platform with a BLEHub tracker without a per-chip guard.
+class BLERemoteReceiver : public Component, public ble_device_base::ESPBTDeviceListener {
 public:
   void set_shared_key(const std::string &key) { this->hmac_key_.setup(std::vector<uint8_t>(key.begin(), key.end())); }
   void set_mac_address(uint64_t mac_address) { this->mac_address_ = mac_address; }
 
   void dump_config() override;
 
-  bool parse_device(const esp32_ble_tracker::ESPBTDevice &device) override;
+  bool parse_device(const ble_device_base::ESPBTDevice &device) override;
 
   void add_on_command_trigger(BLERemoteReceiverCommandTrigger *trigger) {
     this->on_command_triggers_.push_back(trigger);

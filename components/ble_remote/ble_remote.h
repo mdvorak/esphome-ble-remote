@@ -27,6 +27,9 @@ protected:
   // first-packet skip on this packet, not on the user's first real press.
   void send_boot_sentinel_();
 
+  // Pack the command into manufacturer data and hand it to the BLE server.
+  void broadcast_(const BLERemoteCommandData &data);
+
   esp32_ble_server::BLEServer *ble_server_{nullptr};
   BLERemoteHMACKey hmac_key_;
   uint32_t last_nonce_{0};
