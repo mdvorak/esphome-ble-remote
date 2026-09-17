@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.0](https://github.com/mdvorak/esphome-ble-remote/compare/v1.2.0...v1.3.0) (2026-09-17)
+
+
+### Features
+
+* bump esphome/esphome from 2026.8.2 to 2026.9.0 ([2bde85d](https://github.com/mdvorak/esphome-ble-remote/commit/2bde85d72391882b584e862a4749a2148c3105be))
+
+
+### Bug Fixes
+
+* request BLE advertising explicitly for ble_remote on esphome 2026.9.0+ ([4a746a1](https://github.com/mdvorak/esphome-ble-remote/commit/4a746a1757e5db26bc6a74a36b729491e8d61156))
+
 ## [1.2.0](https://github.com/mdvorak/esphome-ble-remote/compare/v1.1.0...v1.2.0) (2026-09-09)
 
 
