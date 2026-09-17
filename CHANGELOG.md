@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/mdvorak/esphome-ble-remote/compare/v1.3.0...v1.3.1) (2026-09-17)
+
+
+### Bug Fixes
+
+* move advertising_required to BLERemote::setup() so it isn't clobbered ([c74f4c2](https://github.com/mdvorak/esphome-ble-remote/commit/c74f4c2c3e49c193bb965fc6f433faff99ca05ea))
+
 ## [1.3.0](https://github.com/mdvorak/esphome-ble-remote/compare/v1.2.0...v1.3.0) (2026-09-17)
 
 
