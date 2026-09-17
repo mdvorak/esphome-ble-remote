@@ -2,7 +2,8 @@ import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome import automation
 from esphome.components import esp32_ble_server
-from esphome.const import CONF_ID
+from esphome.const import CONF_ID, __version__ as ESPHOME_VERSION
+from esphome.core import Version
 from esphome.components.ble_remote_common import CONF_SHARED_KEY, CONF_COMMAND, SHARED_KEY_SCHEMA
 
 CODEOWNERS = ["@mdvorak"]
@@ -14,6 +15,11 @@ BLERemote = ble_remote_ns.class_("BLERemote", cg.Component)
 BLERemoteWriteAction = ble_remote_ns.class_("BLERemoteWriteAction", automation.Action)
 
 CONF_BLE_SERVER_ID = "ble_server_id"
+
+# BLEServer.set_advertising_required() was added in 2026.9.0, when advertising became
+# reference-counted and a server with no static manufacturer_data/services config stopped
+# requesting it on its own. Before that release, set_manufacturer_data() always advertised.
+ADVERTISING_REQUIRED_VERSION = Version(2026, 9, 0)
 
 CONFIG_SCHEMA = cv.Schema(
     {
@@ -31,6 +37,9 @@ async def to_code(config):
     ble_server = await cg.get_variable(config[CONF_BLE_SERVER_ID])
     cg.add(var.set_ble_server(ble_server))
     cg.add(var.set_shared_key(config[CONF_SHARED_KEY]))
+
+    if Version.parse(ESPHOME_VERSION) >= ADVERTISING_REQUIRED_VERSION:
+        cg.add(ble_server.set_advertising_required(True))
 
 
 @automation.register_action(
