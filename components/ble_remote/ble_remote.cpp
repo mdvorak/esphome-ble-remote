@@ -1,6 +1,7 @@
 #include "ble_remote.h"
 #include "esphome/core/helpers.h"
 #include "esphome/core/log.h"
+#include "esphome/core/version.h"
 #include <inttypes.h>
 
 #include <cstring>
@@ -9,7 +10,18 @@ namespace esphome::ble_remote {
 
 static constexpr char TAG[] = "ble_remote";
 
-void BLERemote::setup() { this->send_boot_sentinel_(); }
+void BLERemote::setup() {
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2026, 9, 0)
+  // esp32_ble_server's own to_code() decides advertising_required from its static YAML
+  // config (manufacturer_data/services), so it always turns this off for us since we set
+  // manufacturer data at runtime. Doing it here, in Component::setup(), runs after all
+  // codegen-time setters, so it can't be clobbered by that decision.
+  if (this->ble_server_ != nullptr) {
+    this->ble_server_->set_advertising_required(true);
+  }
+#endif
+  this->send_boot_sentinel_();
+}
 
 void BLERemote::dump_config() {
   ESP_LOGCONFIG(TAG, "BLE Remote:");
